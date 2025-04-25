@@ -1,3 +1,4 @@
+import io
 import tempfile
 import uuid
 from fastapi import FastAPI, HTTPException, Query
@@ -90,8 +91,8 @@ app = FastAPI(
             "description": "Plot the KP data, B data, and SAO metadata for selected station"
         }
     ],
-    title="SWIMAGD_IONO Workflow API",
-    description="The SWIMAGD_IONO workflow provides: <br /><br />(a) Geomagnetic three-hourly (T00:00:00, T03:00:00, …, T21:00:00) Kp index​; <br />(b) DSCOVR mission Magdata records (Bmag, Bx, By, Bz) as part of the SWIF model Data Collection; <br />(c) Distinct ionospheric characteristics (SAO records) for 10 European Digisonde stations (AT138, EA036, EB040, DB049, JR055, PQ052, RL052, RO041, SO148, TR170).",
+    title="Bottomside IONOspheric response Solar Wind Magnetosphere driven (BIONO_SWM)",
+    description="The BIONO_SWM workflow provides: <br /><br />(a) Geomagnetic three-hourly (T00:00:00, T03:00:00, …, T21:00:00) Kp index​; <br />(b) DSCOVR mission Magdata records (Bmag, Bx, By, Bz) as part of the SWIF model Data Collection; <br />(c) Distinct ionospheric characteristics (SAO records) for 10 European Digisonde stations (AT138, EA036, EB040, DB049, JR055, PQ052, RL052, RO041, SO148, TR170).",
     version="1.1.0",
     root_path="/wf-swimagd_iono"
 )
@@ -694,12 +695,14 @@ async def plot_data(date_of_interest: str = Query(..., description="Date in the 
     plt.tight_layout()
     # Save the plot to a temporary file, png format, filename is station_date_of_interest_characteristics_seperated_by_-.png
     plot_filename = f"{selected_station}_{date_of_interest}_{characteristics.replace(',','-')}.png"
-    plt.savefig(f'/tmp/{plot_filename}')
+    img_io = io.BytesIO()
+    fig.savefig(img_io, format='png', bbox_inches='tight')
+    img_io.seek(0)
     plt.close()
     # Return the output as a FileResponse
     headers = {
         'Content-Disposition': f'attachment; filename="{plot_filename}"'
     }
-    return FileResponse(f"/tmp/{plot_filename}", media_type="image/png", headers=headers)
+    return StreamingResponse(img_io, media_type="image/png")
     
     
